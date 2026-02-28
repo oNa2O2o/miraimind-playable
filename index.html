@@ -113,7 +113,7 @@
             font-size: 18px;
             font-weight: 700;
             color: #fff;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5);
         }
         
         /* 聊天内容区 */
@@ -157,9 +157,10 @@
         
         .message-sender {
             font-size: 12px;
-            color: rgba(255,255,255,0.6);
+            color: #fff;
             margin-bottom: 4px;
             font-weight: 500;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8);
         }
         
         .message-content {
@@ -168,6 +169,7 @@
             font-size: 14px;
             line-height: 1.4;
             word-wrap: break-word;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 2px 6px rgba(0,0,0,0.8);
         }
         
         .chat-message.ai .message-content {
@@ -186,11 +188,12 @@
         
         .message-meta {
             font-size: 10px;
-            color: rgba(255,255,255,0.5);
+            color: #fff;
             margin-top: 4px;
             display: flex;
             align-items: center;
             gap: 6px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8);
         }
         
         .message-status {
@@ -372,6 +375,7 @@
             font-size: 14px;
             font-style: italic;
             margin-left: 4px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8);
         }
         
         /* 横屏提示 */
@@ -408,6 +412,67 @@
             .orientation-hint {
                 display: flex;
             }
+        }
+        
+        /* ===== 结束页 ===== */
+        .end-page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+        }
+        
+        .end-page.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .end-content {
+            text-align: center;
+            animation: fadeInUp 0.6s ease;
+        }
+        
+        .end-logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        
+        .end-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8);
+        }
+        
+        .end-desc {
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.8);
+        }
+        
+        .end-hint {
+            font-size: 14px;
+            color: rgba(255,255,255,0.8);
+            margin-top: 20px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+            animation: pulse 2s infinite;
         }
     </style>
 </head>
@@ -494,6 +559,16 @@
                         <button class="key send" id="keyboardSend">Send</button>
                     </div>
                 </div>
+            </div>
+        </div>
+        
+        <!-- 结束页 -->
+        <div class="end-page" id="endPage">
+            <div class="end-content">
+                <img src="https://oversea.hellogroupcdn.com/s1/u/ibjjeahbh/loveRo/LOGO2.png" alt="MiraiMind" class="end-logo">
+                <h2 class="end-title">Discover Your AI Soulmate</h2>
+                <p class="end-desc">Start meaningful conversations<br>with Eric and more AI companions</p>
+                <p class="end-hint">Tap anywhere to continue ↓</p>
             </div>
         </div>
     </div>
@@ -762,9 +837,9 @@
         }
         
         async function handleSend() {
-            // 用户第二次点击发送时，在发送之前就跳转
+            // 用户第二次点击发送时，显示结束页面
             if (state.userMessageCount >= 1) {
-                gotoDownloadPage();
+                showEndPage();
                 return;
             }
             
@@ -800,6 +875,20 @@
             await addMessage('ai', SECOND_MESSAGE);
             
             state.isTyping = false;
+        }
+        
+        // ===== 显示结束页面 =====
+        function showEndPage() {
+            const endPage = document.getElementById('endPage');
+            endPage.classList.add('active');
+            
+            // 点击结束页面任意地方跳转到商店
+            endPage.addEventListener('click', gotoDownloadPage);
+            
+            // 1秒后自动跳转到商店
+            setTimeout(() => {
+                gotoDownloadPage();
+            }, 1000);
         }
         
         // ===== 初始化聊天 =====
