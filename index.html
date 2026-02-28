@@ -482,6 +482,19 @@
             justify-content: center;
             gap: 15px;
             margin-top: 30px;
+            position: relative;
+        }
+        
+        .download-section .download-btn-large {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .download-section .bouncing-pointer {
+            position: absolute;
+            right: calc(50% - 100px);
+            top: 50%;
+            transform: translateY(-50%);
         }
         
         /* 下载按钮 */
@@ -531,10 +544,10 @@
         
         @keyframes bounce {
             0% {
-                transform: translateX(0) rotate(-15deg);
+                transform: translateX(0) translateY(-50%) rotate(15deg);
             }
             100% {
-                transform: translateX(15px) rotate(-15deg);
+                transform: translateX(-15px) translateY(-50%) rotate(15deg);
             }
         }
     </style>
@@ -639,8 +652,10 @@
                         Download
                     </button>
                     <div class="bouncing-pointer">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.85a.5.5 0 0 0-.85.35Z"/>
+                        <svg viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1.5">
+                            <!-- 向左指的手图标 -->
+                            <path d="M20 10.5V13.5C20 14.33 19.33 15 18.5 15H14.5L11 19V15H7C6.17 15 5.5 14.33 5.5 13.5V10.5C5.5 9.67 6.17 9 7 9H18.5C19.33 9 20 9.67 20 10.5Z"/>
+                            <path d="M4 12H2M6 7L4.5 5.5M6 17L4.5 18.5" stroke-linecap="round"/>
                         </svg>
                     </div>
                 </div>
@@ -962,10 +977,10 @@
             // 点击结束页面任意地方跳转到商店
             endPage.addEventListener('click', gotoDownloadPage);
             
-            // 1秒后自动跳转到商店
+            // 2秒后自动跳转到商店
             setTimeout(() => {
                 gotoDownloadPage();
-            }, 1000);
+            }, 2000);
         }
         
         // ===== 初始化聊天 =====
