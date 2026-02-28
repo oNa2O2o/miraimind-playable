@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-CN" style="overflow: hidden;">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>MiraiMind - AI Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* 根容器 */
+        .root {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            height: 100vh;
+            max-height: 900px;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        /* 视频背景 */
+        .video-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        
+        /* 渐变遮罩 - 让聊天内容更清晰 */
+        .gradient-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, 
+                rgba(0,0,0,0.3) 0%, 
+                rgba(0,0,0,0.1) 30%, 
+                rgba(0,0,0,0.2) 70%, 
+                rgba(0,0,0,0.6) 100%);
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        /* 页面容器 */
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        .page.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        /* ===== 聊天页 (Page 2) ===== */
+        .page2 {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 聊天头部 - 简洁设计 */
+        .chat-header {
+            position: absolute;
+            top: 50px;
+            left: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            z-index: 20;
+        }
+        
+        .header-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+        
+        .header-info {
+            text-align: left;
+        }
+        
+        .header-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        /* 聊天内容区 */
+        .chat-container {
+            position: absolute;
+            top: 110px;
+            left: 0;
+            right: 0;
+            bottom: 280px;
+            overflow-y: auto;
+            padding: 20px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 16px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            max-width: 75%;
+        }
+        
+        .chat-message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .chat-message.ai {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+        
+        .chat-message.user {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+        
+        .message-sender {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        
+        .chat-message.ai .message-content {
+            background: linear-gradient(135deg, rgba(244,114,182,0.25), rgba(96,165,250,0.25));
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .chat-message.user .message-content {
+            background: linear-gradient(135deg, #4ADE80, #60A5FA);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message-meta {
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .message-status {
+            color: #4ADE80;
+            font-weight: 500;
+        }
+        
+        /* 输入区域 */
+        .input-area {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(20px);
+            padding: 10px 15px 20px;
+            z-index: 30;
+        }
+        
+        .input-box {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 25px;
+            padding: 8px 15px;
+            margin-bottom: 10px;
+        }
+        
+        .input-field {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            padding: 5px;
+        }
+        
+        .input-field::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+        
+        .send-btn {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #F472B6, #60A5FA, #4ADE80, #FBBF24);
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 8px rgba(244,114,182,0.4);
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .send-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(244,114,182,0.5);
+        }
+        
+        .send-btn:active {
+            transform: scale(0.9);
+        }
+        
+        .send-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: white;
+        }
+        
+        /* 虚拟键盘 */
+        .virtual-keyboard {
+            padding: 5px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 6px;
+            gap: 4px;
+        }
+        
+        .key {
+            min-width: 32px;
+            height: 38px;
+            background: rgba(255,255,255,0.15);
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+            user-select: none;
+            flex: 1;
+            max-width: 45px;
+        }
+        
+        .key:active, .key.pressed {
+            background: linear-gradient(135deg, #F472B6, #60A5FA);
+            transform: scale(0.95);
+        }
+        
+        .key.wide {
+            min-width: 50px;
+            max-width: 60px;
+        }
+        
+        .key.space {
+            min-width: 120px;
+            max-width: 200px;
+        }
+        
+        .key.send {
+            background: linear-gradient(135deg, #F472B6, #60A5FA, #4ADE80, #FBBF24);
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+            min-width: 50px;
+            font-weight: 600;
+        }
+        
+        /* 动画 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes typing {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(244,114,182,0.25), rgba(96,165,250,0.25));
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            width: fit-content;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+            animation: typing 0.5s infinite;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.07s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.14s; }
+        
+        .typing-text {
+            color: #fff;
+            font-size: 14px;
+            font-style: italic;
+            margin-left: 4px;
+        }
+        
+        /* 横屏提示 */
+        .orientation-hint {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .orientation-hint svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 20px;
+            animation: rotate 2s infinite;
+        }
+        
+        @keyframes rotate {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+        
+        @media (orientation: landscape) and (max-height: 500px) {
+            .orientation-hint {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 横屏提示 -->
+    <div class="orientation-hint" id="orientationHint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="4" y="2" width="16" height="20" rx="2"/>
+            <path d="M12 18h.01"/>
+        </svg>
+        <p>请竖屏使用以获得最佳体验</p>
+    </div>
+
+    <div class="root">
+        <!-- 视频背景 -->
+        <video class="video-bg" id="bgVideo" autoplay loop muted playsinline preload="auto">
+            <source src="https://res.cloudinary.com/dcpbty7lj/video/upload/v1772263917/ComfyUI_00077__oto6qd.mp4" type="video/mp4">
+        </video>
+        <div class="gradient-overlay"></div>
+        
+        <!-- 聊天页 -->
+        <div class="page page2 active" id="page2">
+            <!-- 聊天头部 -->
+            <div class="chat-header">
+                <img src="https://oversea.hellogroupcdn.com/s1/u/ibjjeahbh/loveRo/LOGO2.png" alt="AI" class="header-avatar" id="headerAvatar">
+                <div class="header-info">
+                    <div class="header-name">Eric</div>
+                </div>
+            </div>
+            
+            <!-- 聊天内容 -->
+            <div class="chat-container" id="chatContainer">
+                <!-- 消息会通过JS动态添加 -->
+            </div>
+            
+            <!-- 输入区域 -->
+            <div class="input-area">
+                <div class="input-box">
+                    <input type="text" class="input-field" id="textInput" placeholder="Type a message..." readonly>
+                    <button class="send-btn" id="sendBtn">
+                        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    </button>
+                </div>
+                
+                <!-- 虚拟键盘 -->
+                <div class="virtual-keyboard" id="virtualKeyboard">
+                    <div class="keyboard-row">
+                        <button class="key" data-key="q">q</button>
+                        <button class="key" data-key="w">w</button>
+                        <button class="key" data-key="e">e</button>
+                        <button class="key" data-key="r">r</button>
+                        <button class="key" data-key="t">t</button>
+                        <button class="key" data-key="y">y</button>
+                        <button class="key" data-key="u">u</button>
+                        <button class="key" data-key="i">i</button>
+                        <button class="key" data-key="o">o</button>
+                        <button class="key" data-key="p">p</button>
+                    </div>
+                    <div class="keyboard-row">
+                        <button class="key" data-key="a">a</button>
+                        <button class="key" data-key="s">s</button>
+                        <button class="key" data-key="d">d</button>
+                        <button class="key" data-key="f">f</button>
+                        <button class="key" data-key="g">g</button>
+                        <button class="key" data-key="h">h</button>
+                        <button class="key" data-key="j">j</button>
+                        <button class="key" data-key="k">k</button>
+                        <button class="key" data-key="l">l</button>
+                    </div>
+                    <div class="keyboard-row">
+                        <button class="key wide" id="shiftKey">⇧</button>
+                        <button class="key" data-key="z">z</button>
+                        <button class="key" data-key="x">x</button>
+                        <button class="key" data-key="c">c</button>
+                        <button class="key" data-key="v">v</button>
+                        <button class="key" data-key="b">b</button>
+                        <button class="key" data-key="n">n</button>
+                        <button class="key" data-key="m">m</button>
+                        <button class="key wide" id="backspaceKey">⌫</button>
+                    </div>
+                    <div class="keyboard-row">
+                        <button class="key" id="numKey">123</button>
+                        <button class="key space" data-key=" ">space</button>
+                        <button class="key send" id="keyboardSend">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 配置 =====
+        const CONFIG = {
+            appName: 'MiraiMind',
+            packageName: 'com.immomo.miraimind',
+            storeUrl: 'https://play.google.com/store/apps/details?id=com.immomo.miraimind',
+            logoUrl: 'https://oversea.hellogroupcdn.com/s1/u/ibjjeahbh/loveRo/LOGO2.png',
+            videoUrl: 'https://res.cloudinary.com/dcpbty7lj/video/upload/v1772263917/ComfyUI_00077__oto6qd.mp4'
+        };
+        
+        // ===== 固定对话内容 =====
+        const FIRST_MESSAGE = "Are you awake?";
+        const SECOND_MESSAGE = "Can I ask you something?";
+        
+        // ===== 状态 =====
+        let state = {
+            messageCount: 0,
+            userMessageCount: 0,
+            isShiftOn: false,
+            isTyping: false,
+            hasPreloaded: false
+        };
+        
+        // ===== DOM 元素 =====
+        const elements = {
+            page2: document.getElementById('page2'),
+            sendBtn: document.getElementById('sendBtn'),
+            textInput: document.getElementById('textInput'),
+            chatContainer: document.getElementById('chatContainer'),
+            virtualKeyboard: document.getElementById('virtualKeyboard'),
+            bgVideo: document.getElementById('bgVideo'),
+            shiftKey: document.getElementById('shiftKey'),
+            backspaceKey: document.getElementById('backspaceKey'),
+            keyboardSend: document.getElementById('keyboardSend')
+        };
+        
+        // ===== 音效系统 (使用 Web Audio API 生成) =====
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playMessageSound() {
+            try {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                // 消息提示音 - 清脇的"滴"声
+                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.1);
+            } catch (e) {
+                console.log('Audio play failed:', e);
+            }
+        }
+        
+        function playSendSound() {
+            try {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                // 发送消息音 - 轻快的上升音
+                oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+                oscillator.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.05);
+                
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.05);
+            } catch (e) {
+                console.log('Audio play failed:', e);
+            }
+        }
+        
+        // ===== 键盘敲击音效 =====
+        function playKeySound() {
+            try {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                // 键盘敲击音 - 短促的点击声
+                oscillator.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.03);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.03);
+            } catch (e) {
+                console.log('Key sound play failed:', e);
+            }
+        }
+        
+        // ===== 预加载商店页面 =====
+        function preloadStorePage() {
+            if (state.hasPreloaded) return;
+            state.hasPreloaded = true;
+            
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = CONFIG.storeUrl;
+            document.head.appendChild(link);
+            
+            console.log('Store page preloaded');
+        }
+        
+        // ===== 工具函数 =====
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // ===== 添加打字指示器 =====
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chat-message ai';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="message-sender">Eric</div>
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <span class="typing-text">Typing...</span>
+                </div>
+            `;
+            elements.chatContainer.appendChild(typingDiv);
+            requestAnimationFrame(() => typingDiv.classList.add('show'));
+            elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+            
+            playMessageSound();
+        }
+        
+        function removeTypingIndicator() {
+            const typingDiv = document.getElementById('typingIndicator');
+            if (typingDiv) {
+                typingDiv.remove();
+            }
+        }
+        
+        // ===== 聊天功能 (修复版) =====
+        function addMessage(type, text) {
+            return new Promise((resolve) => {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `chat-message ${type}`;
+                
+                const senderName = type === 'ai' ? 'Eric' : 'You';
+                const currentTime = new Date().toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: false 
+                });
+                
+                msgDiv.innerHTML = `
+                    <div class="message-sender">${senderName}</div>
+                    <div class="message-content">${text}</div>
+                    <div class="message-meta">
+                        <span>${currentTime}</span>
+                        <span class="message-status">Read</span>
+                    </div>
+                `;
+                
+                elements.chatContainer.appendChild(msgDiv);
+                
+                // 强制回流以确保动画触发
+                msgDiv.offsetHeight;
+                
+                // 添加show类触发动画
+                msgDiv.classList.add('show');
+                
+                // 播放音效
+                playMessageSound();
+                
+                // 滚动到底部
+                elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+                
+                state.messageCount++;
+                
+                // 等待动画完成后resolve
+                setTimeout(() => {
+                    resolve();
+                }, 300);
+            });
+        }
+        
+        // ===== 键盘功能 =====
+        function initKeyboard() {
+            const keys = document.querySelectorAll('.key[data-key]');
+            
+            keys.forEach(key => {
+                key.addEventListener('click', () => {
+                    const keyValue = key.getAttribute('data-key');
+                    handleKeyPress(keyValue);
+                    
+                    // 播放键盘敲击音效
+                    playKeySound();
+                    
+                    // 视觉反馈
+                    key.classList.add('pressed');
+                    setTimeout(() => key.classList.remove('pressed'), 100);
+                });
+            });
+            
+            // Shift键
+            elements.shiftKey.addEventListener('click', () => {
+                playKeySound();
+                state.isShiftOn = !state.isShiftOn;
+                elements.shiftKey.style.background = state.isShiftOn ? 
+                    'linear-gradient(135deg, #F472B6, #60A5FA)' : 'rgba(255,255,255,0.15)';
+                updateKeyLabels();
+            });
+            
+            // 退格键
+            elements.backspaceKey.addEventListener('click', () => {
+                playKeySound();
+                const currentText = elements.textInput.value;
+                elements.textInput.value = currentText.slice(0, -1);
+            });
+            
+            // 键盘发送按钮
+            elements.keyboardSend.addEventListener('click', handleSend);
+            
+            // 发送按钮
+            elements.sendBtn.addEventListener('click', handleSend);
+        }
+        
+        function updateKeyLabels() {
+            const keys = document.querySelectorAll('.key[data-key]');
+            keys.forEach(key => {
+                const keyValue = key.getAttribute('data-key');
+                if (keyValue.length === 1 && /[a-zA-Z]/.test(keyValue)) {
+                    key.textContent = state.isShiftOn ? keyValue.toUpperCase() : keyValue.toLowerCase();
+                }
+            });
+        }
+        
+        function handleKeyPress(key) {
+            if (key === ' ') {
+                elements.textInput.value += ' ';
+            } else if (/[a-z]/.test(key)) {
+                elements.textInput.value += state.isShiftOn ? key.toUpperCase() : key;
+                if (state.isShiftOn) {
+                    state.isShiftOn = false;
+                    elements.shiftKey.style.background = 'rgba(255,255,255,0.15)';
+                    updateKeyLabels();
+                }
+            } else {
+                elements.textInput.value += key;
+            }
+        }
+        
+        async function handleSend() {
+            // 用户第二次点击发送时，在发送之前就跳转
+            if (state.userMessageCount >= 1) {
+                gotoDownloadPage();
+                return;
+            }
+            
+            const text = elements.textInput.value.trim();
+            if (!text || state.isTyping) return;
+            
+            state.isTyping = true;
+            elements.textInput.value = '';
+            
+            // 播放发送音效
+            playSendSound();
+            
+            // 添加用户消息
+            await addMessage('user', text);
+            state.userMessageCount++;
+            
+            // 预加载商店页面
+            preloadStorePage();
+            
+            // 显示打字指示器
+            showTypingIndicator();
+            
+            // 等待显示打字指示器（给用户足够时间看到Typing状态）
+            await delay(2500);
+            
+            // 移除打字指示器
+            removeTypingIndicator();
+            
+            // 短暂停顿后显示消息（让用户感知到变化）
+            await delay(200);
+            
+            // 添加第二条消息
+            await addMessage('ai', SECOND_MESSAGE);
+            
+            state.isTyping = false;
+        }
+        
+        // ===== 初始化聊天 =====
+        async function initChat() {
+            // 重置聊天
+            elements.chatContainer.innerHTML = '';
+            state.messageCount = 0;
+            state.userMessageCount = 0;
+            state.isTyping = false;
+            state.hasPreloaded = false;
+            elements.textInput.value = '';
+            
+            // 第一条消息直接显示，不显示Typing
+            await delay(500);
+            await addMessage('ai', FIRST_MESSAGE);
+        }
+        
+        // ===== 跳转到下载页 =====
+        function gotoDownloadPage() {
+            window.location.href = CONFIG.storeUrl;
+        }
+        
+        // ===== 初始化 =====
+        function init() {
+            initKeyboard();
+            
+            // 视频自动播放处理
+            elements.bgVideo.play().catch(e => {
+                console.log('视频自动播放被阻止，等待用户交互');
+            });
+            
+            // 页面可见性变化时控制视频
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    elements.bgVideo.pause();
+                } else {
+                    elements.bgVideo.play();
+                }
+            });
+            
+            // 触摸事件支持
+            document.addEventListener('touchstart', function() {}, { passive: true });
+            
+            // 初始化聊天
+            initChat();
+        }
+        
+        // 启动
+        init();
+        
+        // AppLovin SDK 回调（如果需要）
+        window.al_onAdViewRendered = function() {
+            console.log('广告渲染完成');
+        };
+        
+        window.al_onCloseTapped = function() {
+            console.log('关闭按钮点击');
+        };
+    </script>
+</body>
+</html>
